@@ -5,7 +5,16 @@ import numpy as np
 from itertools import product
 import logging
 from typing import List, Any, Union, Optional
-from mat_decomp import MatprrLUFixedTol
+
+import os
+import sys
+
+# Ensure the project root is in sys.path for imports
+
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+from matrix.mat_decomp import MatprrLUFixedTol
 
 # Initialize logger
 logger = logging.getLogger(__name__)

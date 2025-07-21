@@ -2,7 +2,12 @@ import logging
 import cytnx
 from cytnx import *
 import numpy as np
-from IndexSet import *  # Assuming IndexSet class is defined elsewhere
+
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+from interface.IndexSet import *  # Assuming IndexSet class is defined elsewhere
 
 # 初始化 logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')

@@ -1,20 +1,32 @@
-# tensor_ci.py
+#tensor_ci.py
 import cytnx
-from cytnx import UniTensor, Tensor, Bond, BD_IN, BD_OUT, linalg, Type, Device, from_numpy
+from cytnx import UniTensor, Tensor, Bond, BD_IN, BD_OUT, linalg, Type, Device ,from_numpy
 from typing import List, Callable, Optional, Any, Tuple
 import logging
 import numpy as np
 import dataclasses
 from itertools import product # Added for trueError in TensorCI1
+#--- Necessary imports
 
-# --- Necessary imports ---
-from tensor_train import TensorTrain #
-from matrix_interface import IMatrix, MatLazyIndex, make_IMatrix # Added make_IMatrix
-from crossdata import CrossData #
-from pivot_finder import PivotFinder, PivotFinderParam, PivotData #
-from tensorfuc import TensorFunction #
-from tensor_utils import cube_as_matrix1, cube_as_matrix2, mat_AB1, mat_A1B #
-from IndexSet import IndexSet
+import sys
+import os
+
+# 計算出專案的根目錄路徑 (也就是 example/ 的上一層)
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+# 如果根目錄還不在 sys.path 中，就將它加進去
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+from tensor.tensor_train import TensorTrain # Corrected import
+from interface.matrix_interface import IMatrix, MatLazyIndex, make_IMatrix
+from matrix.crossdata import CrossData # Corrected import
+from matrix.pivot_finder import PivotFinder, PivotFinderParam, PivotData
+from interface.tensorfuc import TensorFunction
+# Corrected import
+from tensor.tensor_utils import cube_as_matrix1, cube_as_matrix2, mat_AB1,mat_A1B
+from interface.IndexSet import IndexSet # Corrected import
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG) # Force DEBUG level for this logger

@@ -5,11 +5,16 @@ import numpy as np
 import cytnx
 from typing import List, Tuple, Optional, Callable
 from dataclasses import dataclass
-
+import os
+import sys
 # Assuming crossdata.py and matrix_interface.py are in the same directory
 # or accessible via PYTHONPATH
-from crossdata import CrossData #
-from matrix_interface import IMatrix #
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+from matrix.crossdata import CrossData #
+from interface.matrix_interface import IMatrix #
 
 @dataclass
 class PivotData:

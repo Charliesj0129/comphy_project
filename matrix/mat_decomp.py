@@ -1,5 +1,14 @@
 # filename: mat_decomp.py
-from cytnx_prrLU import RankRevealingLU
+import sys
+import os
+
+# 計算出專案的根目錄路徑 (也就是 example/ 的上一層)
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+# 如果根目錄還不在 sys.path 中，就將它加進去
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+from matrix.cytnx_prrLU import RankRevealingLU
 # -*- coding: utf-8 -*-
 """mat_decomp.py
 ================

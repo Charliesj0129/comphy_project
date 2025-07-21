@@ -1,9 +1,17 @@
 # filename: matrix_interface.py (Corrected based on user feedback and Cytnx API)
 import cytnx
 import numpy as np # 必須導入 numpy
+import sys
+import os
 
+# 計算出專案的根目錄路徑 (也就是 example/ 的上一層)
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+# 如果根目錄還不在 sys.path 中，就將它加進去
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 from cytnx import Tensor, zeros, Type, Device, from_numpy # 導入 from_numpy
-from IndexSet import IndexSet # Assuming IndexSet.py is in the Python path
+from interface.IndexSet import IndexSet # Assuming IndexSet.py is in the Python path
 from typing import Tuple, Callable, Any, Dict, List, Optional 
 
 import logging
