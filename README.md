@@ -47,81 +47,91 @@
 
 這個驗證流程直接證明了 `TensorFunction` 的核心價值：對於計算成本高昂的函數，它能顯著減少總計算量，這對於 TCI 演算法的整體效能至關重要 。
 
-好的，我們繼續 `interface` 目錄的下一個組件。
-
-這是 `interface/Qgrid.py` 的 Markdown 說明文件。
 
 -----
 
 ## `interface/Qgrid.py`
 
-此組件提供了 `QuanticsGrid` 類別，它是實現論文中 **量化張量表示法 (Quantics Representation)** 的核心工具。Quantics 的主要思想是透過將變數的數值用其二進位表示法來取代，從而以指數級的解析度來描述一個函數，而這正是 TCI 演算法能高效處理多尺度問題的關鍵。
+[cite\_start]此組件提供了 `QuanticsGrid` 類別，它是實現論文中 **量化張量表示法 (Quantics Representation)** 的核心工具 [cite: 1262, 1269][cite\_start]。Quantics 的思想是透過將一個連續的物理變數 `x` 映射到其二進位的「量化」表示 `σ`，從而讓 TCI 演算法能夠處理具有指數級解析度的函數 [cite: 1263, 1274]。
+
+`QuanticsGrid` 的真正威力在於它作為一個**翻譯層**，無縫地橋接了**使用者定義的物理函數**和**TCI 演算法內部的索引系統**。
 
 ### 物件與功能論述
 
   * **`QuanticsGrid` 物件**:
-      * **核心用途**: 此物件的功能是作為一個「座標與索引轉換器」。它管理著一個虛擬的、具有指數級精度的網格，並負責在三種不同的表示法之間進行無縫轉換：
+      * **核心用途**: 此物件扮演著一個「座標系統翻譯官」的角色。它本身不儲存龐大的網格資料，而是儲存了**轉換規則**。這些規則定義了如何在以下三種表示法之間進行轉換：
 
-        1.  **物理座標 (Physical Coordinates)**: 函數的原始輸入變數，例如 `(x, y)`。
-        2.  **線性網格索引 (Linear Grid Index)**: 在離散化網格上的一個整數索引，例如 `(m_x, m_y)`。
-        3.  **量化位元串 (Quantics Bit String)**: 線性索引的二進位表示，也是 TCI 演算法直接處理的張量索引 `σ`。
+        1.  **物理座標 (Physical Coordinates)**: 使用者函數 `f(x, y, ...)` 所理解的連續或離散座標。
+        2.  **線性網格索引 (Linear Grid Index)**: 虛擬離散化網格上的一個整數索引 `(m_x, m_y, ...)`。
+        3.  [cite\_start]**量化位元串 (Quantics Bit String)**: TCI 演算法所操作的張量索引 `σ` [cite: 1271]。
 
-      ***論文連結**: `QuanticsGrid` 直接對應論文第 6.1 節「Definition」中的概念。論文中提到，一個變數 `x` 可以被離散化並用 R 個位元 `σ = (σ₁, σ₂, ..., σ_R)` 來表示 。`QuanticsGrid` 類別正是這個映射過程的具體程式碼實作。它讓 TCI 演算法能將一個關於連續變數 `x` 的函數 `f(x)`，視為一個關於離散位元索引 `σ` 的張量 `F_σ` 來處理 。
+      * [cite\_start]**論文連結**: `QuanticsGrid` 直接對應論文第 6.1 節「Definition」中的概念 [cite: 1268][cite\_start]。論文指出，一個函數 `f(x)` 可以被視為一個張量 `F_σ = f(x(σ))` [cite: 1274]。`QuanticsGrid` 正是實現了 `x(σ)` 這個關鍵的轉換函式。TCI 演算法在學習過程中，會向 `TensorFunction` 傳遞 `σ` 索引；而 `TensorFunction` 內部則會利用 `QuanticsGrid` 將 `σ` **翻譯**回物理座標 `x`，然後才呼叫使用者真正的函數 `f(x)`。
 
       * **關鍵屬性與行為**:
 
-          * **`dim`**: 網格的維度，即物理座標的變數數量（例如，2 維函數的 `dim` 為 2）。
-          * **`nBit`**: 用於表示每個維度變數的位元數量 `R`。網格的總解析度為 `M = 2^R` 。
-          * **`a`, `b`**: 定義了每個維度上物理座標的範圍 `[a, b)`。
-          * **`unfoldingscheme`**: 位元串的排列方式。這是一個至關重要的參數，它決定了 TCI 張量鏈的結構。
-              * **`'interleaved'` (交錯式)**: 將不同變數但在相同尺度下的位元放在一起 。例如，對於 `(x, y)`，位元串會是 `(σ_x1, σ_y1, σ_x2, σ_y2, ...)`。這種方式通常能更有效地捕捉變數間的關聯，從而得到更低的張量秩 。
-              * **`'fused'` (融合式)**: 將同一尺度下的所有位元「融合」成一個新的、維度更大的索引 。
-          * **轉換方法**:
-              * `grididx_to_quantics(m)`: 將線性索引 `m` 轉換為量化位元串 `σ`。
-              * `quantics_to_grididx(σ)`: 將量化位元串 `σ` 轉換回線性索引 `m`。
-              * `quantics_to_origcoord(σ)`: 將量化位元串 `σ` 直接轉換為物理座標 `x`。
+          * [cite\_start]**`dim`**, **`nBit`**, **`a`**, **`b`**: 這些參數定義了座標系統的維度、解析度 (`2^nBit` 個點) 和物理範圍 `[a, b)` [cite: 1269]。
+          * [cite\_start]**`unfoldingscheme`**: 位元串的排列方式，如 `'interleaved'`（交錯式），這對於找到最低秩的張量鏈表示至關重要 [cite: 1283, 1294]。
+          * **`quantics_to_origcoord(σ)`**: 這是與 `TensorFunction` 互動時最核心的方法。它接收 TCI 演算法傳來的 `σ` 索引，並將其翻譯成使用者函數可以理解的物理座標。
 
-### 如何呼叫與使用
+### 如何呼叫與使用：結合 `TensorFunction`
 
-使用者在進行量化 TCI (Quantics TCI) 計算時，首先需要建立一個 `QuanticsGrid` 物件來定義問題的座標系統。
+`QuanticsGrid` 和 `TensorFunction` 的結合使用是執行 Quantics TCI 的標準模式。使用者並非將物理函數直接傳給 `TensorFunction`，而是傳入一個**包含了座標翻譯步驟**的新函數。
 
-1.  **實例化**: 根據函數的維度、所需的解析度 (`nBit`) 和物理範圍來建立 `QuanticsGrid` 物件。
+1.  **定義物理函數**: 首先，定義您想要分析的、以物理座標為輸入的函數。
 
     ```python
-    # 建立一個用於 2 維函數、範圍為 [-1, 1)、每個維度用 8 個位元表示的網格
-    grid = QuanticsGrid(dim=2, nBit=8, a=-1.0, b=1.0)
+    # 物理函數 f(x, y)
+    def my_physical_function(coords):
+        x, y = coords
+        return np.cos(x) * np.sin(y)
     ```
 
-2.  **在 TensorFunction 中使用**: 在將使用者函數包裝成 `TensorFunction` 時，會利用 `QuanticsGrid` 物件進行座標轉換。
+2.  **建立 `QuanticsGrid`**: 建立一個 `QuanticsGrid` 物件來定義座標系統。
 
     ```python
-    # 假設有一個使用者函數 f(x, y)
-    def user_function(coords):
-        x, y = coords
-        return x**2 + y**2
+    from comphy_project.interface.Qgrid import QuanticsGrid
 
-    # TCI 演算法處理的是以 σ 為輸入的函數
-    def function_for_tci(sigma):
-        # 透過 grid 物件將 TCI 的索引 σ 轉換為物理座標
+    # 建立一個 2 維，範圍 [-π, π)，每個維度用 10 個位元表示的網格
+    grid = QuanticsGrid(dim=2, nBit=10, a=-np.pi, b=np.pi)
+    ```
+
+3.  **建立「翻譯」函數**: 建立一個新的函數，它接收 TCI 的 `σ` 索引，利用 `grid` 物件進行翻譯，然後再呼叫物理函數。
+
+    ```python
+    def tci_target_function(sigma):
+        # 步驟 1: TCI 傳入 sigma 索引
+        # 步驟 2: 使用 grid 物件將 sigma 翻譯成物理座標 (x, y)
         physical_coords = grid.quantics_to_origcoord(sigma)
-        # 再呼叫原始的使用者函數
-        return user_function(physical_coords)
+        
+        # 步驟 3: 將翻譯後的物理座標傳入真正的使用者函數
+        return my_physical_function(physical_coords)
+    ```
 
-    tensor_func = TensorFunction(function_for_tci)
+4.  **將「翻譯」函數傳給 `TensorFunction`**: 最後，將這個包含了翻譯邏輯的 `tci_target_function` 傳遞給 `TensorFunction` 進行封裝。
+
+    ```python
+    from comphy_project.interface.tensorfuc import TensorFunction
+
+    tensor_func = TensorFunction(tci_target_function)
+
+    # 這個 tensor_func 現在可以被傳遞給 TensorCI 主演算法
+    # tci_solver = TensorCI(tensor_func, ...)
     ```
 
 ### 概念驗證測試
 
-要驗證 `QuanticsGrid` 的功能，我們需要確認其在不同表示法之間的轉換是否雙向且一致。
+要驗證 `QuanticsGrid` 與 `TensorFunction` 的協同工作，我們需要模擬 TCI 演算法的行為，確認整個資訊流是正確的。
 
-1.  **選擇一個點**: 任意選擇一個線性網格索引 `m`，例如 `(10, 20)`。
-2.  **進行正向轉換**: 呼叫 `grid.grididx_to_quantics(m)` 將 `m` 轉換為其對應的量化位元串 `σ`。同時，手動根據二進位轉換和 `unfoldingscheme` 計算理論上的 `σ`，並進行比對。
-3.  **進行反向轉換**: 呼叫 `grid.quantics_to_grididx(σ)` 將上一步得到的 `σ` 轉換回線性索引 `m'`。驗證 `m'` 是否與原始的 `m` 完全相同。
-4.  **驗證物理座標**: 呼叫 `grid.quantics_to_origcoord(σ)` 將 `σ` 轉換為物理座標 `x`。同時，根據公式 `x = a + (b-a) * m / (2^R)` 手動計算理論上的物理座標，並與 `QuanticsGrid` 的輸出進行比對，確認其準確性。
+1.  **建立完整的流程**: 按照上述「如何呼叫與使用」的 4 個步驟，建立 `my_physical_function`, `grid`, `tci_target_function` 和 `tensor_func`。
+2.  **選擇一個 TCI 索引**: 選擇一個量化位元串 `σ`。我們可以從一個線性索引 `m` 開始，然後用 `grid` 將其轉換成 `σ`，以確保其有效性。例如，選擇 `m = (100, 200)`。
+3.  **手動計算理論值**:
+      * 首先，將 `m = (100, 200)` 手動計算出其對應的物理座標 `(x, y)`。
+      * 然後，將 `(x, y)` 代入 `my_physical_function`，得到理論上的函數值。
+4.  **透過 `TensorFunction` 呼叫**:
+      * 使用 `m` 透過 `grid.grididx_to_quantics(m)` 得到 `σ`。
+      * 呼叫 `tensor_func(σ)`，這會觸發 `tci_target_function` 內部的完整翻譯流程。
+5.  **比對結果**: 驗證 `tensor_func(σ)` 的回傳值是否與手動計算的理論值完全相符。如果相符，則證明 `QuanticsGrid` 成功地作為一個翻譯層，讓 `TensorFunction` 能夠為 TCI 演算法提供一個基於 `σ` 索引的正確介面，同時在內部處理了到物理座標的複雜映射。
 
-這個流程確保了 `QuanticsGrid` 物件能夠正確且可靠地處理論文中描述的量化座標系統，為後續的 TCI 計算提供了正確的索引基礎。
-
-好的，這是 `interface/matrix_interface.py` 的 Markdown 說明文件。
 
 ***
 
@@ -170,10 +180,6 @@
     * 將它們合併成全局索引 `(i, j, k, l)`，並手動計算出 `F(i,j,k,l)` 的理論值。
 5.  **實際呼叫比對**: 呼叫 `matrix_interface.get_value(A, B)`，取得實際的返回值。
 6.  **驗證**: 比對理論值與實際返回值是否完全相等。如果相等，則證明 `MatrixInterface` 成功且正確地將高維索引的映射和查詢邏輯封裝起來，為底層演算法提供了可靠的二維矩陣抽象。
-
-好的，我們接著撰寫 `matrix` 目錄下的核心組件。
-
-這是 `matrix/AdaptiveLU.py` 的 Markdown 說明文件。
 
 ***
 
@@ -234,10 +240,6 @@
 
 這個流程驗證了 `AdaptiveLU` 成功地實現了論文中描述的「秩揭示」和「完全樞軸」策略，確保了 TCI 演算法在選擇最重要的資訊點時的準確性和高效性。
 
-好的，我們來撰寫 `matrix` 目錄下的 `crossdata.py` 組件說明。
-
-這是 `matrix/crossdata.py` 的 Markdown 說明文件。
-
 ***
 
 ## `matrix/crossdata.py`
@@ -281,8 +283,6 @@
     * **驗證樞紐**: 檢查 `cross_data.pivots` 列表的長度是否等於秩。同時，根據測試矩陣的元素分佈，手動預測樞紐應該在哪些位置，並與 `pivots` 列表中的實際值進行比對。
     * **(可選) 驗證重建**: 使用 `CrossData` 中儲存的 `L`, `U`, `D` 因子，根據公式 `A ≈ LDU` 來手動重建近似矩陣。然後，計算這個重建矩陣與原始測試矩陣之間的誤差，驗證誤差是否在 `tolerance` 的範圍內。
 
-這個流程確保了 `CrossData` 物件能夠忠實且準確地承載矩陣分解的結果，為 TCI 演算法的後續步驟提供了可靠的資料基礎。
-好的，接下來我們為 `matrix` 目錄中負責實際數值計算的兩個核心組件 `cytnx_prrLU.py` 和 `mat_decomp.py` 撰寫 Markdown 文件。
 
 ***
 
@@ -362,8 +362,6 @@ TCI 主演算法將矩陣分解的任務委派給 `AdaptiveLU.py`，而 `Adaptiv
     * 確認物件的 `rank` 和 `pivots` 屬性是否與預期相符。
     * 這個測試流程看似與 `cytnx_prrLU.py` 的測試重複，但其核心目的不同。這裡的重點是驗證 `mat_decomp.py` 作為一個「調度員」是否稱職，確保它能正確地將任務分派下去，並將結果完整地帶回來，而沒有在中間層發生任何資訊的遺失或錯誤的處理。
 
-好的，這是 `matrix` 目錄下 `pivot_finder.py` 的 Markdown 說明文件。
-
 ***
 
 ## `matrix/pivot_finder.py`
@@ -416,9 +414,6 @@ TCI 主演算法將矩陣分解的任務委派給 `AdaptiveLU.py`，而 `Adaptiv
 
 這個流程確保了 `pivot_finder.py` 能夠根據指定的策略，準確地為 `prrLU` 分解提供核心的決策依據。
 
-好的，我們進入 `tensor` 目錄，這是 TCI (Tensor Cross Interpolation) 演算法的核心實作部分。首先為 `auto_mpo.py` 撰寫 Markdown 文件。
-
-這是 `tensor/auto_mpo.py` 的 Markdown 說明文件。
 
 -----
 
@@ -503,9 +498,6 @@ TCI 主演算法將矩陣分解的任務委派給 `AdaptiveLU.py`，而 `Adaptiv
 3.  **計算內積 (Overlap)**: 論文的 Listing 4 和公式 (90) 提供了一種驗證方法。我們可以計算原始 `polyOp` `H` 與生成的 `mpo` 之間的內積 `<H|mpo>`，以及 `mpo` 自身的範數 `<mpo|mpo>`。
 4.  **驗證**: 一個正確的 MPO 應該滿足 `|<H|mpo>|² / (<H|H> * <mpo|mpo>) ≈ 1`。在實作上，通常會提供一個類似 `H.overlap(mpo)` 的輔助函式來進行此項檢查。如果內積結果與範數相符，則證明 `auto_mpo` 成功地將符號化的哈密頓量轉換成了準確且緊湊的 MPO 表示，其結構與論文中預期的理論值（例如海森堡模型的鍵結維度為 8）一致。
 
-好的，我們繼續 `tensor` 目錄的下一個核心組件。
-
-這是 `tensor/tensor_train.py` 的 Markdown 說明文件。
 
 -----
 
@@ -602,10 +594,7 @@ TCI 主演算法將矩陣分解的任務委派給 `AdaptiveLU.py`，而 `Adaptiv
       * 檢查壓縮後的 `bond_dimensions` 是否如預期般地減小了。
       * （可選）隨機選取幾個索引，比較壓縮前後 `eval` 的結果，確保誤差在 `tolerance` 範圍內。
 
-這個流程確保了 `TensorTrain` 物件不僅能正確儲存張量鏈的結構，其提供的各種核心操作也符合數學上的定義和預期行為。
-好的，這是 `tensor` 目錄下最核心的組件 `tensor_ci.py` 的 Markdown 說明文件。
 
------
 
 ## `tensor/tensor_ci.py`
 
