@@ -52,7 +52,7 @@
 
 ## `interface/Qgrid.py`
 
-[cite\_start]此組件提供了 `QuanticsGrid` 類別，它是實現論文中 **量化張量表示法 (Quantics Representation)** 的核心工具 [cite: 1262, 1269][cite\_start]。Quantics 的思想是透過將一個連續的物理變數 `x` 映射到其二進位的「量化」表示 `σ`，從而讓 TCI 演算法能夠處理具有指數級解析度的函數 [cite: 1263, 1274]。
+此組件提供了 `QuanticsGrid` 類別，它是實現論文中 **量化張量表示法 (Quantics Representation)** 的核心工具 。Quantics 的思想是透過將一個連續的物理變數 `x` 映射到其二進位的「量化」表示 `σ`，從而讓 TCI 演算法能夠處理具有指數級解析度的函數 。
 
 `QuanticsGrid` 的真正威力在於它作為一個**翻譯層**，無縫地橋接了**使用者定義的物理函數**和**TCI 演算法內部的索引系統**。
 
@@ -63,14 +63,14 @@
 
         1.  **物理座標 (Physical Coordinates)**: 使用者函數 `f(x, y, ...)` 所理解的連續或離散座標。
         2.  **線性網格索引 (Linear Grid Index)**: 虛擬離散化網格上的一個整數索引 `(m_x, m_y, ...)`。
-        3.  [cite\_start]**量化位元串 (Quantics Bit String)**: TCI 演算法所操作的張量索引 `σ` [cite: 1271]。
+        3.  **量化位元串 (Quantics Bit String)**: TCI 演算法所操作的張量索引 `σ` 。
 
-      * [cite\_start]**論文連結**: `QuanticsGrid` 直接對應論文第 6.1 節「Definition」中的概念 [cite: 1268][cite\_start]。論文指出，一個函數 `f(x)` 可以被視為一個張量 `F_σ = f(x(σ))` [cite: 1274]。`QuanticsGrid` 正是實現了 `x(σ)` 這個關鍵的轉換函式。TCI 演算法在學習過程中，會向 `TensorFunction` 傳遞 `σ` 索引；而 `TensorFunction` 內部則會利用 `QuanticsGrid` 將 `σ` **翻譯**回物理座標 `x`，然後才呼叫使用者真正的函數 `f(x)`。
+      * **論文連結**: `QuanticsGrid` 直接對應論文第 6.1 節「Definition」中的概念 。論文指出，一個函數 `f(x)` 可以被視為一個張量 `F_σ = f(x(σ))` 。`QuanticsGrid` 正是實現了 `x(σ)` 這個關鍵的轉換函式。TCI 演算法在學習過程中，會向 `TensorFunction` 傳遞 `σ` 索引；而 `TensorFunction` 內部則會利用 `QuanticsGrid` 將 `σ` **翻譯**回物理座標 `x`，然後才呼叫使用者真正的函數 `f(x)`。
 
       * **關鍵屬性與行為**:
 
-          * [cite\_start]**`dim`**, **`nBit`**, **`a`**, **`b`**: 這些參數定義了座標系統的維度、解析度 (`2^nBit` 個點) 和物理範圍 `[a, b)` [cite: 1269]。
-          * [cite\_start]**`unfoldingscheme`**: 位元串的排列方式，如 `'interleaved'`（交錯式），這對於找到最低秩的張量鏈表示至關重要 [cite: 1283, 1294]。
+          * **`dim`**, **`nBit`**, **`a`**, **`b`**: 這些參數定義了座標系統的維度、解析度 (`2^nBit` 個點) 和物理範圍 `[a, b)` 。
+          * **`unfoldingscheme`**: 位元串的排列方式，如 `'interleaved'`（交錯式），這對於找到最低秩的張量鏈表示至關重要 。
           * **`quantics_to_origcoord(σ)`**: 這是與 `TensorFunction` 互動時最核心的方法。它接收 TCI 演算法傳來的 `σ` 索引，並將其翻譯成使用者函數可以理解的物理座標。
 
 ### 如何呼叫與使用：結合 `TensorFunction`
